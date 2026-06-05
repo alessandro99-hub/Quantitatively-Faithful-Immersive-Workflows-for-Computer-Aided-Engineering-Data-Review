@@ -1,0 +1,128 @@
+Algorithm: CFD Surface Data Loading and Sampling
+
+BEGIN
+
+    Load mesh from MeshFilter
+
+    IF mesh is not available THEN
+        Display error
+        EXIT
+    END IF
+
+    Assign the same mesh to the MeshCollider
+
+    Compute quantization scale from position tolerance
+
+    Define CSV file path
+    Define cache file path
+
+    IF binary cache is enabled THEN
+        TRY to load cache
+        IF cache is valid THEN
+            EXIT
+        END IF
+    END IF
+
+    --------------------------------------
+    PROCEDURE LoadFromCSV
+    --------------------------------------
+
+    Open CSV file
+
+    Read header
+    Identify coordinate columns (Points:0, Points:1, Points:2)
+
+    Identify all remaining data fields
+
+    Check whether velocity components are present
+    Store their column indices
+
+    Create:
+        - Dictionary<PointKey, RowIndex>
+        - List<AllFieldValues>
+
+    FOR each row in the CSV file DO
+
+        Skip empty or malformed rows
+
+        Read point coordinates
+
+        Convert coordinates from ParaView system
+        to Unity coordinate system
+
+        Quantize point coordinates
+
+        IF point has not been stored before THEN
+            Store mapping:
+                QuantizedPoint -> CurrentRow
+        END IF
+
+        IF velocity fields exist THEN
+            Read velocity components
+            Convert them to Unity axis convention
+        END IF
+
+        FOR each available field DO
+
+            IF current field is a velocity component THEN
+                Store converted velocity
+            ELSE
+                Store parsed scalar value
+            END IF
+
+        END FOR
+
+    END FOR
+
+    Create value matrix:
+        Values[MeshVertex][Field]
+
+    FOR each mesh vertex DO
+
+        Quantize vertex position
+
+        IF corresponding CSV point exists THEN
+
+            Copy all field values from CSV row
+            to current mesh vertex
+
+        END IF
+
+    END FOR
+
+    Optionally print loading statistics
+
+    --------------------------------------
+    END PROCEDURE
+    --------------------------------------
+
+    IF binary cache is enabled THEN
+        Save loaded data into cache
+    END IF
+
+END
+
+
+--------------------------------------------------
+PROCEDURE SampleAtHit(RaycastHit)
+--------------------------------------------------
+
+IF mesh or stored values are unavailable THEN
+    RETURN
+END IF
+
+Retrieve the triangle hit by the raycast
+
+Get its three vertex indices
+
+Obtain barycentric coordinates
+
+Select the vertex with the largest barycentric weight
+(i.e., the closest vertex to the hit point)
+
+Retrieve all CFD field values associated with
+the selected vertex
+
+Return sampled values
+
+END PROCEDURE
