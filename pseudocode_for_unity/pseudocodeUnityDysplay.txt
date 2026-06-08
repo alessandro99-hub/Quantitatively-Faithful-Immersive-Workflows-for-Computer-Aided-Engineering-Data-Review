@@ -1,0 +1,87 @@
+using UnityEngine;
+using TMPro;
+using System.Text;
+
+public class CfdUiDisplay : MonoBehaviour
+{
+    [Header("Riferimenti UI")]
+    public Transform panel;
+    public TextMeshProUGUI text;
+
+    [Header("Posizione del pannello")]
+    public float verticalOffset = 0.05f;
+
+    [Header("Opzioni")]
+    public int maxRows = 10;
+
+    private string GetFieldUnit(string fieldName)
+    {
+        if (string.IsNullOrEmpty(fieldName))
+            return "";
+
+        string name = fieldName.ToLowerInvariant();
+
+        if (name == "velocity_magnitude") return "m/s";
+        if (name == "x_velocity" || name == "y_velocity" || name == "z_velocity") return "m/s";
+
+        if (name == "pressure" || name == "total_pressure") return "Pa";
+        if (name == "wall_shear") return "Pa";
+
+        return "";
+    }
+
+    public void ShowValues(Vector3 worldPos, string[] fieldNames, float[] values)
+    {
+        if (panel == null || text == null || fieldNames == null || values == null)
+            return;
+
+        // sposto il pannello leggermente sopra il punto selezionato
+        panel.position = worldPos + Vector3.up * verticalOffset;
+
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            // faccio ruotare il pannello verso la camera, ma solo sull'asse Y
+            Vector3 directionToCamera = cam.transform.position - panel.position;
+            directionToCamera.y = 0f;
+
+            if (directionToCamera.sqrMagnitude > 0.000001f)
+            {
+                directionToCamera.Normalize();
+                panel.rotation = Quaternion.LookRotation(directionToCamera, Vector3.up);
+            }
+        }
+
+        int count = Mathf.Min(fieldNames.Length, values.Length);
+        if (count <= 0)
+            return;
+
+        count = Mathf.Min(count, maxRows);
+
+        StringBuilder builder = new StringBuilder();
+
+        builder.AppendLine("CFD data");
+        builder.AppendLine();
+
+        for (int i = 0; i < count; i++)
+        {
+            string fieldName = fieldNames[i];
+            float value = values[i];
+            string unit = GetFieldUnit(fieldName);
+
+            builder.Append(fieldName);
+            builder.Append(" = ");
+            builder.Append(value.ToString("F3"));
+
+            if (!string.IsNullOrEmpty(unit))
+            {
+                builder.Append(" ");
+                builder.Append(unit);
+            }
+
+            builder.AppendLine();
+        }
+
+        text.text = builder.ToString();
+    }
+}
